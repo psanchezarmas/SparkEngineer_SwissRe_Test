@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spark_app"
+version = "0.1.0"
+description = "Example Spark ETL application"
+authors = [{name = "Candidate"}]
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = [
+    "pyspark>=3.5.1"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+]

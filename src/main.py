@@ -1,17 +1,17 @@
 # Initial code for running docker
 
-from pyspark.sql import SparkSession
+"""Legacy launcher that forwards to the ``spark_app`` package.
 
-spark = SparkSession.builder \
-    .appName("DockerSparkTest") \
-    .master("local[*]") \
-    .getOrCreate()
+This module remains for backwards compatibility; new code should import
+from ``spark_app`` directly.
+"""
 
-df = spark.createDataFrame(
-    [("Pablo", 25), ("Lucía", 30)],
-    ["name", "age"]
-)
+from __future__ import annotations
 
-df.show()
+import sys
 
-spark.stop()
+from spark_app.main import main
+
+
+if __name__ == "__main__":
+    sys.exit(main())
