@@ -1,6 +1,9 @@
-"""Package entry point for the Spark application."""
+"""Package entry point for the Spark ETL application."""
 
-from .main import create_spark_session
 from .nse_pipeline import main as run_nse_pipeline
 from .transactions_pipeline import main as run_transactions_pipeline
-__all__ = ["run", "create_spark_session"]
+
+__all__ = [
+    "run_nse_pipeline",
+    "run_transactions_pipeline",
+]

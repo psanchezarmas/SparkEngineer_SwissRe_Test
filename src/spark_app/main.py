@@ -1,54 +1,45 @@
-"""Command‑line entry point for the Spark ETL application."""
-from __future__ import annotations
+"""
+Command‑line entry point for the Spark ETL application.
+Allows selecting which pipeline to run: NSE or Transactions.
+"""
 
 import argparse
 import logging
 import sys
-from pyspark.sql import SparkSession
 
-from . import etl
+from nse_pipeline import main as run_nse_pipeline
+from transactions_pipeline import main as run_transactions_pipeline
 
 
-def create_spark_session(app_name: str = "spark_app") -> SparkSession:
-    """Build a SparkSession configured for local development.
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Run Spark ETL pipelines")
 
-    Args:
-        app_name: name to give the Spark application.
-
-    Returns:
-        a ``SparkSession`` instance.
-    """
-    return (
-        SparkSession.builder.appName(app_name).master("local[*]")
-        .getOrCreate()
+    parser.add_argument(
+        "--pipeline",
+        required=True,
+        choices=["nse", "transactions"],
+        help="Pipeline to run: 'nse' or 'transactions'"
     )
 
-
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run ETL job on input CSV")
-    parser.add_argument("--input", required=True, help="Path to input CSV file")
-    parser.add_argument("--output", required=True, help="Path to output directory")
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Application entrypoint.
-
-    Returns 0 on success, non-zero on failure.
-    """
+def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO)
     args = parse_args(argv)
 
-    spark = create_spark_session()
     try:
-        etl.run(spark, args.input, args.output)
-        logging.info("ETL job finished successfully")
+        if args.pipeline == "nse":
+            run_nse_pipeline()
+        elif args.pipeline == "transactions":
+            run_transactions_pipeline()
+
+        logging.info("Pipeline finished successfully")
         return 0
-    except Exception as e:  # pragma: no cover - let tests exercise failure cases
-        logging.exception("ETL job failed")
+
+    except Exception:
+        logging.exception("Pipeline failed")
         return 1
-    finally:
-        spark.stop()
 
 
 if __name__ == "__main__":

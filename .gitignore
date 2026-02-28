@@ -6,3 +6,5 @@ __pycache__/
 
 # Spark temporary directories
 /tmp/spark-* 
+
+.venv
