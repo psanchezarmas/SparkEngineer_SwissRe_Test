@@ -111,3 +111,68 @@ tables:
           type: timestamp
           nullable: false
           description: Timestamp when the record was processed into the bronze layer
+  - layer: silver
+    tables:
+    - table_name: silver_transaction
+      description: Claim Table from Europe 3
+      columns:
+      - name: CONTRACT_SOURCE_SYSTEM
+        type: string
+        nullable: false
+        description: Default value "Europe 3"
+        source: lit("Europe 3")
+      - name: CONTRACT_SOURCE_SYSTEM_ID
+        type: long
+        nullable: false
+        description: CONTRACT.CONTRACT_ID
+        source: col("CONTRACT_ID")
+      - name: SOURCE_SYSTEM_ID
+        type: string
+        nullable: false
+        description: CLAIM_ID without prefix (e.g. A_123 → 123)
+        source: regexp_replace(col("CLAIM_ID"), "^[A-Za-z_]+", "")
+      - name: TRANSACTION_TYPE
+        type: string
+        nullable: false
+        description: |
+          "Corporate" if CLAIM_TYPE = 2
+          "Private" if CLAIM_TYPE = 1
+          "Unknown" if CLAIM_TYPE is empty
+        source: |
+          when(col("CLAIM_TYPE") == 2, "Corporate")
+            .when(col("CLAIM_TYPE") == 1, "Private")
+            .otherwise("Unknown")
+      - name: TRANSACTION_DIRECTION
+        type: string
+        nullable: false
+        description: |
+          "COINSURANCE" when CLAIM_ID contains "CL"
+          "REINSURANCE" when CLAIM_ID contains "RX"
+        source: |
+          when(col("CLAIM_ID").like("%CL%"), "COINSURANCE")
+            .when(col("CLAIM_ID").like("%RX%"), "REINSURANCE")
+      - name: CONFORMED_VALUE
+        type: decimal(16, 5)
+        nullable: false
+        description: CLAIM.AMOUNT
+        source: col("AMOUNT")
+      - name: BUSINESS_DATE
+        type: date
+        nullable: false
+        description: CLAIM.DATE_OF_LOSS formatted as YYYY-MM-DD
+        source: date_format(col("DATE_OF_LOSS"), "yyyy-MM-dd")
+      - name: CREATION_DATE
+        type: timestamp
+        nullable: false
+        description: CLAIM.CREATION_DATE formatted as YYYY-MM-DD HH:mm:ss
+        source: date_format(col("CREATION_DATE"), "yyyy-MM-dd HH:mm:ss")
+      - name: SYSTEM_TIMESTAMP
+        type: timestamp
+        nullable: false
+        description: System timestamp of creating the transaction
+        source: current_timestamp()
+      - name: NSE_ID
+        type: string
+        nullable: false
+        description: MD4 hash digest from API for CLAIM_ID (field "Digest")
+        source: col("digest")
