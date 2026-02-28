@@ -15,8 +15,8 @@ if spark_python_path not in sys.path:
 
 
 from pyspark.sql import SparkSession
-from api_nse.nse_processor import NSEProcessor
-from api_nse.md4_hash_client import MD4HashClient
+from functions.nse_processor import NSEProcessor
+from functions.md4_hash_client import MD4HashClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
