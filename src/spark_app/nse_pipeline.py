@@ -157,7 +157,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Pipeline failed: {str(e)}", exc_info=True)
-        sys.exit(1)
+        sys.exit()
     finally:
         spark.stop()
 
