@@ -50,13 +50,23 @@ def parse_spark_type(type_str: str):
     return spark_type
 
 
+
+
 def build_schema_from_yaml(config: dict, table_name: str) -> StructType:
     """Build Spark StructType from YAML config for a given table."""
+    try: 
+        layer = table_name.split("_", 1)[0]
+    except ValueError: 
+        raise ValueError( 
+            f"Invalid table name format '{table_name}'. Expected 'layer_tablename'." )
+
+
+
     tables = config.get("tables", [])
-    bronze_layer = next((t for t in tables if t.get("layer") == "bronze"), None)
+    bronze_layer = next((t for t in tables if t.get("layer") == layer), None)
 
     if not bronze_layer:
-        raise ValueError("No bronze layer found in schemas.yaml")
+        raise ValueError(f"No layer '{layer}' found in schemas.yaml")
 
     table = next(
         (tbl for tbl in bronze_layer.get("tables", [])

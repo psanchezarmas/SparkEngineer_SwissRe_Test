@@ -1,6 +1,6 @@
 """
 NSE ETL Pipeline
-Reads CLAIM_IDs from bronze claim data, fetches MD4 hashes from API, and stores in parquet table
+Reads CLAIM_IDs from bronze claim data, fetches MD4 hashes from API, and stores in delta table
 """
 import logging
 import os
@@ -35,10 +35,13 @@ def read_claim_ids(spark: SparkSession, claim_path: str) -> list:
     """
     logger.info(f"Reading claim file from: {claim_path}")
     
-    # Read the text/csv file
-    df = spark.read.option("header", "true").option("inferSchema", "true").text(claim_path)
+    # # Read the text/csv file
+    # df = spark.read.option("header", "true").option("inferSchema", "true").text(claim_path)
     
-    # If it's a CSV, read it properly
+    # We read the files. In this case it is fix to be the claim path,
+    # As this specific code it runs the api call for the claim ids, we can assume that the claim file is in csv 
+    # format with a header and a CLAIM_ID column.
+
     df = spark.read.option("header", "true").option("inferSchema", "true").csv(claim_path)
     
     # Extract CLAIM_ID column and collect as list
@@ -55,12 +58,12 @@ def run_nse_pipeline(
     mode: str = "append"
 ) -> None:
     """
-    Run the complete NSE pipeline: fetch API data and write to a parquet table.
+    Run the complete NSE pipeline: fetch API data and write to a delta table.
     
     Args:
         spark: SparkSession instance
         claim_path: Path to bronze claim data
-        output_path: Path to write bronze_nse_id parquet table
+        output_path: Path to write bronze_nse_id delta table
         mode: Write mode (overwrite, append)
     """
     logger.info("Starting NSE ETL Pipeline")
@@ -73,7 +76,7 @@ def run_nse_pipeline(
         return
 
     # avoid re-processing claim_ids which already have NSE records
-    # for this example, we check the existing parquet table for already-processed claim_ids and filter them out before API calls
+    # for this example, we check the existing delta table for already-processed claim_ids and filter them out before API calls
     # in a production scenario we could have multiple alternatives:
     # - maintain a separate tracking table of processed claim_ids
     # - use a more robust upsert mechanism with Delta Lake or similar that would handle duplicates at write time
@@ -86,7 +89,6 @@ def run_nse_pipeline(
 
             #error in delta
             existing_df = spark.read.format("delta").load(nse_path)
-            #existing_df = spark.read.parquet(nse_path)
             existing_ids = {row['claim_id'] for row in existing_df.select('claim_id').collect()}
             logger.info(f"Found {len(existing_ids)} already-processed claim_ids")
     except Exception as e:
@@ -112,7 +114,7 @@ def run_nse_pipeline(
     
     logger.info(f"Successfully created DataFrame with {nse_df.count()} records")
     
-    # Write to bronze parquet table
+    # Write to bronze delta table
     logger.info(f"Writing to delta table: {output_path}")
     processor.write_bronze_table(nse_df, output_path) #, mode=mode)
     

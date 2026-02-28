@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class NSEProcessor:
-    """Processes NSE data from API and creates parquet tables."""
+    """Processes NSE data from API and creates delta tables."""
 
     def __init__(self, spark: SparkSession, api_client: MD4HashClient = None):
         self.spark = spark
