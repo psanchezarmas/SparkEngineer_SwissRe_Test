@@ -57,7 +57,7 @@ class NSEProcessor:
 
         return df
 
-    def write_bronze_table(self, df: DataFrame, path: str) -> None:
+    def write_bronze_table_nse(self, df: DataFrame, path: str) -> None:
         try:
             if DeltaTable.isDeltaTable(self.spark, path):
                 delta_table = DeltaTable.forPath(self.spark, path)

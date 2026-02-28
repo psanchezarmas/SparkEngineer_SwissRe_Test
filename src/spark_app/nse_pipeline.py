@@ -116,7 +116,7 @@ def run_nse_pipeline(
     
     # Write to bronze delta table
     logger.info(f"Writing to delta table: {output_path}")
-    processor.write_bronze_table(nse_df, output_path) #, mode=mode)
+    processor.write_bronze_table_nse(nse_df, output_path)
     
     logger.info("NSE ETL Pipeline completed successfully")
 
