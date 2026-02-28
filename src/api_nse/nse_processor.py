@@ -8,6 +8,7 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType, StructField, StringType, TimestampType
 from datetime import datetime
 from .md4_hash_client import MD4HashClient
+from delta.tables import DeltaTable
 
 logger = logging.getLogger(__name__)
 
@@ -94,19 +95,46 @@ class NSEProcessor:
         
         return df
     
-    def write_bronze_table(self, df: DataFrame, path: str, mode: str = "append") -> None:
-        """
-        Write DataFrame to bronze storage as Parquet.
+    # def write_bronze_table(self, df: DataFrame, path: str, mode: str = "append") -> None:
+    #     """
+    #     Write DataFrame to bronze storage as Parquet.
         
-        Args:
-            df: DataFrame to write
-            path: Path to write the table (directory)
-            mode: Write mode (append, overwrite, etc.)
+    #     Args:
+    #         df: DataFrame to write
+    #         path: Path to write the table (directory)
+    #         mode: Write mode (append, overwrite, etc.)
+    #     """
+    #     try:
+    #         #df.write.mode(mode).parquet(path)
+    #         df.write.format("delta").mode(mode).save(path)
+    #         logger.info(f"Successfully wrote {df.count()} records to {path}")
+    #     except Exception as e:
+    #         logger.error(f"Failed to write table: {str(e)}")
+    #         raise
+
+    def write_bronze_table(self, df: DataFrame, path: str) -> None:
+        """
+        Upsert en Delta: if claim_id exists, it does not insert the dupicate, otherwise it inserts the new record.
         """
         try:
-            #df.write.mode(mode).parquet(path)
-            df.write.format("delta").mode(mode).save(path)
-            logger.info(f"Successfully wrote {df.count()} records to {path}")
+            if DeltaTable.isDeltaTable(self.spark, path):
+                delta_table = DeltaTable.forPath(self.spark, path)
+
+                (
+                    delta_table.alias("t")
+                    .merge(
+                        df.alias("s"),
+                        "t.claim_id = s.claim_id"
+                    )
+                    .whenNotMatchedInsertAll()
+                    .execute()
+                )
+                logger.info(f"Upsert completed in {path}")
+            else:
+                df.write.format("delta").mode("overwrite").save(path)
+                logger.info(f"Delta table created in {path}")
+
         except Exception as e:
-            logger.error(f"Failed to write table: {str(e)}")
+            logger.error(f"Error in MERGE: {str(e)}")
             raise
+

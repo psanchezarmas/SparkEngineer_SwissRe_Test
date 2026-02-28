@@ -15,8 +15,8 @@ if spark_python_path not in sys.path:
 
 
 from pyspark.sql import SparkSession
-from api.nse_processor import NSEProcessor
-from api.md4_hash_client import MD4HashClient
+from api_nse.nse_processor import NSEProcessor
+from api_nse.md4_hash_client import MD4HashClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -92,11 +92,11 @@ def run_nse_pipeline(
     except Exception as e:
         logger.warning(f"Could not read existing NSE data, assuming none: {e}")
 
-    # filter out duplicates
-    claim_ids = [cid for cid in claim_ids if cid not in existing_ids]
-    if not claim_ids:
-        logger.info("All claim_ids already processed; nothing to do.")
-        return
+    # # filter out duplicates
+    # claim_ids = [cid for cid in claim_ids if cid not in existing_ids]
+    # if not claim_ids:
+    #     logger.info("All claim_ids already processed; nothing to do.")
+    #     return
     
     # Initialize processor
     api_client = MD4HashClient()
@@ -114,7 +114,7 @@ def run_nse_pipeline(
     
     # Write to bronze parquet table
     logger.info(f"Writing to delta table: {output_path}")
-    processor.write_bronze_table(nse_df, output_path, mode=mode)
+    processor.write_bronze_table(nse_df, output_path) #, mode=mode)
     
     logger.info("NSE ETL Pipeline completed successfully")
 
@@ -123,7 +123,7 @@ def main():
     """Main entry point for the NSE ETL pipeline."""
     # Initialize Spark
     # standard Spark session with local master
-
+    # for Delta Lake support, we need to add the appropriate JARs and configurations
     spark = SparkSession.builder \
         .appName("NSE-API-Fetch") \
         .master("local[*]") \
