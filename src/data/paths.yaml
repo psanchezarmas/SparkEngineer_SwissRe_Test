@@ -1,0 +1,4 @@
+bronze:
+  claim: "src/data/bronze/claim/bronze_claim.txt"
+  contract: "src/data/bronze/contract/bronze_contract.txt"
+  nse_id: "src/data/bronze/nse_id"
