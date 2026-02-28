@@ -104,7 +104,8 @@ class NSEProcessor:
             mode: Write mode (append, overwrite, etc.)
         """
         try:
-            df.write.mode(mode).parquet(path)
+            #df.write.mode(mode).parquet(path)
+            df.write.format("delta").mode(mode).save(path)
             logger.info(f"Successfully wrote {df.count()} records to {path}")
         except Exception as e:
             logger.error(f"Failed to write table: {str(e)}")

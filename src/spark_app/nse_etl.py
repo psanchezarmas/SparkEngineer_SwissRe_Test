@@ -73,12 +73,20 @@ def run_nse_pipeline(
         return
 
     # avoid re-processing claim_ids which already have NSE records
+    # for this example, we check the existing parquet table for already-processed claim_ids and filter them out before API calls
+    # in a production scenario we could have multiple alternatives:
+    # - maintain a separate tracking table of processed claim_ids
+    # - use a more robust upsert mechanism with Delta Lake or similar that would handle duplicates at write time
+    # 
     existing_ids = set()
     nse_path = output_path
     try:
         if os.path.exists(nse_path):
             logger.info(f"Checking existing NSE data at {nse_path}")
-            existing_df = spark.read.parquet(nse_path)
+
+            #error in delta
+            existing_df = spark.read.format("delta").load(nse_path)
+            #existing_df = spark.read.parquet(nse_path)
             existing_ids = {row['claim_id'] for row in existing_df.select('claim_id').collect()}
             logger.info(f"Found {len(existing_ids)} already-processed claim_ids")
     except Exception as e:
@@ -105,7 +113,7 @@ def run_nse_pipeline(
     logger.info(f"Successfully created DataFrame with {nse_df.count()} records")
     
     # Write to bronze parquet table
-    logger.info(f"Writing to parquet table: {output_path}")
+    logger.info(f"Writing to delta table: {output_path}")
     processor.write_bronze_table(nse_df, output_path, mode=mode)
     
     logger.info("NSE ETL Pipeline completed successfully")
@@ -115,10 +123,16 @@ def main():
     """Main entry point for the NSE ETL pipeline."""
     # Initialize Spark
     # standard Spark session with local master
+
     spark = SparkSession.builder \
-        .master("local[*]") \
         .appName("NSE-API-Fetch") \
+        .master("local[*]") \
+        .config("spark.jars", "/opt/spark/jars/delta-spark_2.12-3.2.0.jar,/opt/spark/jars/delta-storage-3.2.0.jar") \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .config("spark.delta.logStore.class", "org.apache.spark.sql.delta.storage.HDFSLogStore") \
         .getOrCreate()
+    
     
     try:
         # Determine project root and load path configuration

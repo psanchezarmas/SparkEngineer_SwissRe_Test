@@ -19,6 +19,13 @@ RUN curl -L "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-
     | tar -xz -C /opt && \
     mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME}
 
+# Install Delta Lake JARs for Spark 3.5.1
+RUN curl -L "https://repo1.maven.org/maven2/io/delta/delta-spark_2.12/3.2.0/delta-spark_2.12-3.2.0.jar" \
+    -o ${SPARK_HOME}/jars/delta-spark_2.12-3.2.0.jar
+
+RUN curl -L "https://repo1.maven.org/maven2/io/delta/delta-storage/3.2.0/delta-storage-3.2.0.jar" \
+    -o ${SPARK_HOME}/jars/delta-storage-3.2.0.jar
+
 # Install pyspark
 RUN pip3 install --break-system-packages --no-cache-dir pyspark==${SPARK_VERSION}
 
