@@ -33,6 +33,8 @@ class NSEProcessor:
         Returns:
             StructType schema definition
         """
+
+        ##### TO BE CHECKED WITH SCHEMA DEFINITION IN SCHEMAS.YAML, ADJUST NULLABILITY AS NEEDED #####
         return StructType([
             StructField("claim_id", StringType(), False),
             StructField("digest", StringType(), False),

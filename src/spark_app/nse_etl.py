@@ -8,24 +8,13 @@ import sys
 from pathlib import Path
 import yaml
 
-# force environment to use Spark installation from SPARK_HOME if set
 os.environ.setdefault("SPARK_HOME", "/opt/spark")
-# ensure pyspark uses the SPARK_HOME python package as well
 spark_python_path = os.path.join(os.environ["SPARK_HOME"], "python")
 if spark_python_path not in sys.path:
     sys.path.insert(0, spark_python_path)
 
-# No external packages required; we will write Parquet instead of Delta
-# thus there is no dependency on delta-core jars or matching versions.
-# Keep PYSPARK_SUBMIT_ARGS minimal so Spark starts clean.
-os.environ.setdefault("PYSPARK_SUBMIT_ARGS", "pyspark-shell")
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from api.nse_processor import NSEProcessor
 from api.md4_hash_client import MD4HashClient
 
@@ -81,6 +70,24 @@ def run_nse_pipeline(
     
     if not claim_ids:
         logger.error("No CLAIM_IDs found. Exiting.")
+        return
+
+    # avoid re-processing claim_ids which already have NSE records
+    existing_ids = set()
+    nse_path = output_path
+    try:
+        if os.path.exists(nse_path):
+            logger.info(f"Checking existing NSE data at {nse_path}")
+            existing_df = spark.read.parquet(nse_path)
+            existing_ids = {row['claim_id'] for row in existing_df.select('claim_id').collect()}
+            logger.info(f"Found {len(existing_ids)} already-processed claim_ids")
+    except Exception as e:
+        logger.warning(f"Could not read existing NSE data, assuming none: {e}")
+
+    # filter out duplicates
+    claim_ids = [cid for cid in claim_ids if cid not in existing_ids]
+    if not claim_ids:
+        logger.info("All claim_ids already processed; nothing to do.")
         return
     
     # Initialize processor
