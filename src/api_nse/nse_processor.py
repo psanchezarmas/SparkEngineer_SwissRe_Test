@@ -5,10 +5,13 @@ Processes CLAIM_IDs to fetch NSE identifiers via MD4 hash API and create parquet
 import logging
 from typing import List
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, StringType, TimestampType
+from pyspark.sql.types import ( StructType, StructField, StringType, TimestampType, LongType, DateType, DecimalType ) 
 from datetime import datetime
 from .md4_hash_client import MD4HashClient
 from delta.tables import DeltaTable
+import yaml 
+import os
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +32,71 @@ class NSEProcessor:
     
     def get_schema(self) -> StructType:
         """
-        Get the schema for bronze_nse_id table.
-        
-        Returns:
-            StructType schema definition
+        Load schema for bronze_nse_id from schemas.yaml dynamically.
         """
 
-        ##### TO BE CHECKED WITH SCHEMA DEFINITION IN SCHEMAS.YAML, ADJUST NULLABILITY AS NEEDED #####
-        return StructType([
-            StructField("claim_id", StringType(), False),
-            StructField("digest", StringType(), False),
-            StructField("digest_enc", StringType(), True),
-            StructField("type", StringType(), True),
-            StructField("key", StringType(), True),
-            StructField("stored_timestamp", TimestampType(), False),
-            StructField("processed_date", TimestampType(), False),
-        ])
+        # Build absolute path to schemas.yaml 
+        # Assuming this code runs in a container where /app is the root of the project, and schemas.yaml is at src/data/schemas.yaml
+        
+        yaml_path = "/app/src/data/schemas.yaml"
+        if not os.path.exists(yaml_path):
+            raise FileNotFoundError(f"schemas.yaml not found: {yaml_path}")
+        
+
+        # Load YAML
+        with open(yaml_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Find the bronze_nse_id table
+        tables = config.get("tables", [])
+        bronze_tables = next((t for t in tables if t.get("layer") == "bronze"), None)
+
+        if not bronze_tables:
+            raise ValueError("No bronze layer found in schemas.yaml")
+
+        nse_table = next(
+            (tbl for tbl in bronze_tables.get("tables", [])
+            if tbl.get("table_name") == "bronze_nse_id"),
+            None
+        )
+
+        if not nse_table:
+            raise ValueError("bronze_nse_id not found in schemas.yaml")
+
+        # Map YAML types → Spark types
+        # Add all the data types you expect to use in your schemas here
+        type_map = {
+            "string": StringType(),
+            "timestamp": TimestampType(),
+            "date": DateType(),
+            "long": LongType(),
+            
+        }
+
+        def parse_type(type_str: str):
+            if type_str.startswith("decimal"):
+                # decimal(16,5)
+                inside = type_str[type_str.find("(") + 1:type_str.find(")")]
+                precision, scale = map(int, inside.split(","))
+                return DecimalType(precision, scale)
+            return type_map.get(type_str)
+
+        # Build StructType
+        fields = []
+        for col in nse_table["columns"]:
+            spark_type = parse_type(col["type"])
+            if spark_type is None:
+                raise ValueError(f"Unsupported type in YAML: {col['type']}")
+
+            fields.append(
+                StructField(
+                    col["name"],
+                    spark_type,
+                    col.get("nullable", True)
+                )
+            )
+        return StructType(fields)
+
     
     def fetch_and_create_dataframe(self, claim_ids: List[str]) -> DataFrame:
         """
@@ -94,23 +146,7 @@ class NSEProcessor:
         logger.info(f"Created DataFrame with {df.count()} records")
         
         return df
-    
-    # def write_bronze_table(self, df: DataFrame, path: str, mode: str = "append") -> None:
-    #     """
-    #     Write DataFrame to bronze storage as Parquet.
-        
-    #     Args:
-    #         df: DataFrame to write
-    #         path: Path to write the table (directory)
-    #         mode: Write mode (append, overwrite, etc.)
-    #     """
-    #     try:
-    #         #df.write.mode(mode).parquet(path)
-    #         df.write.format("delta").mode(mode).save(path)
-    #         logger.info(f"Successfully wrote {df.count()} records to {path}")
-    #     except Exception as e:
-    #         logger.error(f"Failed to write table: {str(e)}")
-    #         raise
+
 
     def write_bronze_table(self, df: DataFrame, path: str) -> None:
         """

@@ -1,0 +1,113 @@
+---
+# Consolidated Schemas
+
+
+tables:
+  - layer: bronze
+    tables:
+    - table_name: bronze_claim
+      description: Claim Table from Europe 3
+      columns:
+        - name: SOURCE_SYSTEM
+          type: string
+          nullable: false
+          primary_key: true
+          description: Source system identifier for claim
+        - name: CLAIM_ID
+          type: string
+          nullable: false
+          primary_key: true
+          description: Unique claim identifier
+        - name: CONTRACT_SOURCE_SYSTEM
+          type: string
+          nullable: false
+          primary_key: true
+          description: Source system identifier for associated contract
+        - name: CONTRACT_ID
+          type: long
+          nullable: false
+          primary_key: true
+          description: Associated contract identifier
+        - name: CLAIM_TYPE
+          type: long
+          nullable: true
+          description: Type classification of the claim
+        - name: DATE_OF_LOSS
+          type: date
+          nullable: false
+          description: Date when the loss occurred
+        - name: AMOUNT
+          type: decimal(16, 5)
+          nullable: false
+          description: Claim amount with precision of 16 digits and 5 decimal places
+        - name: CREATION_DATE
+          type: timestamp
+          nullable: false
+          description: Date and time when claim was created
+
+    - table_name: bronze_contract
+      description: Contract Table from Europe 3
+      columns:
+        - name: SOURCE_SYSTEM
+          type: string
+          nullable: false
+          primary_key: true
+          description: Source system identifier
+        - name: CONTRACT_ID
+          type: long
+          nullable: false
+          primary_key: true
+          description: Unique contract identifier
+        - name: CONTRACT_TYPE
+          type: string
+          nullable: true
+          description: Type of contract (Direct, Reinsurance, etc.)
+        - name: INSURED_PERIOD_FROM
+          type: date
+          nullable: false
+          description: Start date of insurance period
+        - name: INSURED_PERIOD_TO
+          type: date
+          nullable: false
+          description: End date of insurance period
+        - name: CREATION_DATE
+          type: timestamp
+          nullable: false
+          description: Date and time when contract was created
+    - table_name: bronze_nse_id
+      description: NSE (Non-Standardized Entity) Identifiers from MD4 Hash API
+      notes:
+        - Contains MD4 hash data fetched from external API for each CLAIM_ID
+        - API endpoint: https://api.hashify.net/hash/md4/hex?value=CLAIM_ID
+        - Stores complete JSON response with added timestamp for audit tracking
+        - API response example {"Digest":"238cf61c3a7e1574bf12615d87697e45","DigestEnc":"hex","Type":"MD4","Key":""}
+      columns:
+        - name: claim_id
+          type: string
+          nullable: false
+          primary_key: true
+          description: The CLAIM_ID used to generate the hash
+        - name: digest
+          type: string
+          nullable: false
+          description: MD4 hash digest from API (Digest field)
+        - name: digest_enc
+          type: string
+          nullable: true
+          description: Encoding type of the digest (DigestEnc field from API)
+        - name: type
+          type: string
+          nullable: true
+          description: Hash algorithm type (Type field from API)
+        - name: key
+          type: string
+          nullable: true
+          description: Key field from API response (typically empty)
+        - name: stored_timestamp
+          type: timestamp
+          nullable: false
+          description: Timestamp when the API response was received and stored (ISO format)
+        - name: processed_date
+          type: timestamp
+          nullable: false
+          description: Timestamp when the record was processed into the bronze layer
