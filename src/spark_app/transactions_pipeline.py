@@ -66,7 +66,8 @@ def transform_to_silver(claim_df, contract_df, nse_df):
             "left"
         )
     )
-
+    # Query to create silver_transaction with the required transformations and mappings
+    # Same as schema
     silver_df = (
         joined_df
         .withColumn("CONTRACT_SOURCE_SYSTEM", lit("Europe 3"))

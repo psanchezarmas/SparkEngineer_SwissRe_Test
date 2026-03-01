@@ -4,3 +4,5 @@ bronze:
   nse_id: "src/data/bronze/nse_id"
 silver:
   transactions: "src/data/silver/transactions"
+gold:
+  transactions: "src/data/gold/transactions"

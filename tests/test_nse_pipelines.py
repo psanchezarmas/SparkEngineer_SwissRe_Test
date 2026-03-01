@@ -4,10 +4,12 @@ import os
 
 
 
-
+# ---------------------------------------------------------
+# Test: When NSE API returns no results, pipeline should NOT write bronze table 
+# ---------------------------------------------------------
 def test_run_nse_pipeline_no_api_results(spark, tmp_path):
     with patch("spark_app.nse_pipeline.read_claim_ids", return_value=["CL1"]), \
-         patch("spark_app.nse_pipeline.NSEProcessor") as MockProcessor:
+        patch("spark_app.nse_pipeline.NSEProcessor") as MockProcessor:
 
         mock_proc = MockProcessor.return_value
         mock_proc.fetch_and_create_dataframe.return_value = spark.createDataFrame(
@@ -19,6 +21,9 @@ def test_run_nse_pipeline_no_api_results(spark, tmp_path):
 
         mock_proc.write_bronze_table_nse.assert_not_called()
 
+# ---------------------------------------------------------
+# Test: If reading existing delta table fails, pipeline should still write bronze table
+# ---------------------------------------------------------
 def test_run_nse_pipeline_delta_read_error(spark, tmp_path):
     with patch("spark_app.nse_pipeline.read_claim_ids", return_value=["CL1"]), \
          patch("spark_app.nse_pipeline.os.path.exists", return_value=True), \
@@ -34,6 +39,9 @@ def test_run_nse_pipeline_delta_read_error(spark, tmp_path):
 
         mock_proc.write_bronze_table_nse.assert_called_once()
 
+# --------------------------------------------------------- 
+# Test: main() loads YAML paths and calls run_nse_pipeline 
+# ---------------------------------------------------------
 def test_main_loads_paths(monkeypatch):
     from spark_app import nse_pipeline
 
@@ -46,7 +54,9 @@ def test_main_loads_paths(monkeypatch):
         nse_pipeline.main()
 
     nse_pipeline.run_nse_pipeline.assert_called_once()
-
+# --------------------------------------------------------- 
+# Test: If no claim IDs are found, NSEProcessor should NOT be instantiated 
+# ---------------------------------------------------------
 def test_run_nse_pipeline_no_claims(spark, tmp_path):
     with patch("spark_app.nse_pipeline.read_claim_ids", return_value=[]), \
          patch("spark_app.nse_pipeline.NSEProcessor") as MockProcessor:
@@ -55,7 +65,9 @@ def test_run_nse_pipeline_no_claims(spark, tmp_path):
 
         MockProcessor.assert_not_called()
 
-
+# --------------------------------------------------------- 
+# Test: Pipeline reads existing delta table and filters out already processed claims 
+# ---------------------------------------------------------
 def test_run_nse_pipeline_reads_existing_delta(spark, tmp_path):
     with patch("spark_app.nse_pipeline.read_claim_ids", return_value=["CL1", "CL2"]), \
          patch("spark_app.nse_pipeline.os.path.exists", return_value=True), \
@@ -75,7 +87,9 @@ def test_run_nse_pipeline_reads_existing_delta(spark, tmp_path):
 
         mock_proc.fetch_and_create_dataframe.assert_called_once()
 
-        
+# --------------------------------------------------------- 
+# Test: Pipeline passes correct claim list and writes bronze table 
+# ---------------------------------------------------------
 def test_run_nse_pipeline_path(spark, tmp_path):
     fake_claims = ["CL1", "CL2"]
 
