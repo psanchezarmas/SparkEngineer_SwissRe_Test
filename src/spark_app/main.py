@@ -13,7 +13,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--pipeline",
         required=True,
-        choices=["nse", "transactions", "show_nse", "show_transactions", "gold_transactions"],
+        choices=["nse", "transactions", "show_nse", "show_transactions", "gold_transactions", "show_gold_transactions"],
         help="Pipeline to run: 'nse' or 'transactions' or 'show' or 'gold_transactions'"
     )
 
@@ -39,6 +39,9 @@ def main(argv=None) -> int:
         elif args.pipeline == "show_transactions":
             from spark_app.display_data import main as show_data
             show_data("/app/src/data/silver/transactions")
+        elif args.pipeline == "show_gold_transactions":
+            from spark_app.display_data import main as show_data
+            show_data("/app/src/data/gold/transactions")
         elif args.pipeline == "gold_transactions":
             from spark_app.transactions_file import main as run_transactions_gold_pipeline
             run_transactions_gold_pipeline()
