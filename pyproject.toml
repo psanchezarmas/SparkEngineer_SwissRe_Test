@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spark_app"
+name = "sparkengineer_swissre_test_pablosanchez"
 version = "0.1.0"
-description = "Example Spark ETL application"
-authors = [{name = "Candidate"}]
+description = "Spark ETL application for Swiss Re technical test"
+authors = [{name = "Pablo Sánchez Armas"}]
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "MIT License"}
 dependencies = [
     "pyspark>=3.5.1"
 ]
