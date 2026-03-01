@@ -17,10 +17,8 @@ if spark_python_path not in sys.path:
 
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import (
-    col, regexp_replace, when, date_format, current_timestamp, lit
+    col, regexp_replace, when, date_format, current_timestamp, lit, to_date, to_timestamp
 )
-
-from functions.utils import load_yaml_schema, build_schema_from_yaml
 
 
 logging.basicConfig(level=logging.INFO)
@@ -46,7 +44,8 @@ def load_bronze_tables(spark: SparkSession, paths: dict):
 
     return claim_df, contract_df, nse_df
 
-
+    # The transformation logic to create the silver_transaction table
+    
 def transform_to_silver(claim_df, contract_df, nse_df):
     logger.info("Transforming bronze tables into silver_transaction")
 
@@ -85,8 +84,8 @@ def transform_to_silver(claim_df, contract_df, nse_df):
             .when(col("c.CLAIM_ID").like("%RX%"), "REINSURANCE")
         )
         .withColumn("CONFORMED_VALUE", col("c.AMOUNT"))
-        .withColumn("BUSINESS_DATE", date_format(col("c.DATE_OF_LOSS"), "yyyy-MM-dd"))
-        .withColumn("CREATION_DATE", date_format(col("c.CREATION_DATE"), "yyyy-MM-dd HH:mm:ss"))
+        .withColumn( "BUSINESS_DATE", date_format(to_date(col("c.DATE_OF_LOSS"), "dd.MM.yyyy"), "yyyy-MM-dd") ) # To adapt to the current format of source
+        .withColumn( "CREATION_DATE", date_format(to_timestamp(col("c.CREATION_DATE"), "dd.MM.yyyy HH:mm"), "yyyy-MM-dd HH:mm:ss") ) # To adapt to the current format of source
         .withColumn("SYSTEM_TIMESTAMP", current_timestamp())
         .withColumn("NSE_ID", col("n.digest"))
     )
@@ -105,7 +104,7 @@ def transform_to_silver(claim_df, contract_df, nse_df):
     )
     # logger.info("Show silver_df:") 
     # logger.info(silver_df._jdf.showString(20, 20, False))
-    # fail
+    # To debug the output of the transformation, we can show the first few rows of the silver_df DataFrame.
     return silver_df
 
 
