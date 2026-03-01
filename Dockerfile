@@ -1,6 +1,8 @@
 # File used to create the docker image:
 
-
+# ============================ 
+# BASE IMAGE (Spark + Python) 
+# ============================
 
 FROM eclipse-temurin:11-jdk
 
@@ -37,6 +39,9 @@ COPY requirements.txt pyproject.toml /app/
 # install application dependencies and make the package available
 RUN pip3 install --break-system-packages --no-cache-dir -r requirements.txt && \
     pip3 install --break-system-packages --no-cache-dir -e /app
+
+# Execute tests, if they fail, the build will fail and the image won't be created
+RUN pytest -vv
 
 # by default start an interactive pyspark shell; clients can override
 # this with a different command when running the container
